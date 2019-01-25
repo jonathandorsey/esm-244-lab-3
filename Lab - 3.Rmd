@@ -1,0 +1,108 @@
+---
+title: "Assignment 3"
+author: "Jonathan Dorsey"
+date: "January 24, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###0. Attach packages
+```{r, message=FALSE}
+
+library(tidyverse)
+library(naniar)
+library(boot)
+library(simputation)
+```
+
+###A. Bootstrapping penguin flipper lengths
+
+1. Get penguins data
+```{r}
+
+
+penguins <- read_csv("penguins.csv")
+
+male_p <- penguins %>% 
+    filter(sex == "MALE")
+
+# Only 22 samples, cant use central limit theorem, but plot distribution anyways
+
+ggplot(male_p, aes(x=flipper_length))+
+    geom_histogram(bins = 10)+
+    theme_bw()
+
+# Can use the "$" sign, but we will use the pull function in dplyr instead
+
+flippers <- male_p %>% 
+    pull(flipper_length)
+```
+
+###Create a function, and do some bootstrapping
+
+```{r}
+
+mean_fun <- function(x,i) {mean(x[i])}
+
+set.seed(10)
+boot_10 <- boot(flippers, mean_fun, R=10)
+
+set.seed(10)
+boot(flippers, mean_fun, R=10)
+
+# Does not work because it needs a proper data frame
+#ggplot(aes(x = flippers))+
+    #geom_histogram
+
+ggplot()+
+    aes(boot_100$t)+
+    geom_histogram()
+
+boot_100K <- boot(flippers, mean_fun, R = 100000)
+
+ggplot()+
+    aes(boot_100K$t)+
+    geom_histogram()
+
+#calculate the confidence interval using boot.ci() function in the boot package
+
+boot.ci(boot_100K, conf=0.95)
+
+vis_miss(airquality)
+
+gg_miss_var(airquality, facet = Month)
+
+# functions to work with GGplot
+# geom_miss_point()
+#shows which points are missing which data pieces
+
+ggplot(airquality, aes(x = Ozone, y = Solar.R))+
+  geom_miss_point()
+
+ggplot(airquality, aes(x=Solar.R, y = Temp))+
+    geom_miss_point()+
+  scale_color_manual(values = c("orange", "purple"))+
+  facet_wrap(~Month)
+
+
+# Create a shadow matrix
+
+na_shadow <- bind_shadow(airquality)
+View(na_shadow)
+
+# Imputation by Linear Regression
+
+airquality %>% 
+      impute_lm(Ozone ~ Temp + Wind) %>% 
+      ggplot(aes( x = Temp, y = Ozone))+
+      geom_point()
+
+na_shadow %>% 
+    impute_lm(Ozone ~ Temp + Wind) %>% 
+      ggplot(aes( x = Temp, y = Ozone, color = Ozone_NA))+
+      geom_point()
+```
+
